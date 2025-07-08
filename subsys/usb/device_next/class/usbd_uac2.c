@@ -754,106 +754,136 @@ static int set_feature_unit_request(struct usbd_class_data *const c_data,
 
 /* Handler for GET requests (device-to-host) */
 static int get_feature_unit_request(struct usbd_class_data *const c_data,
-				    const struct usb_setup_packet *const setup,
-				    struct net_buf *const buf)
+                    const struct usb_setup_packet *const setup,
+                    struct net_buf *const buf)
 {
-	const struct device *dev = usbd_class_get_private(c_data);
-	struct uac2_ctx *ctx = dev->data;
-	const uint8_t cs = CONTROL_SELECTOR(setup);
-	const uint8_t cn = CONTROL_CHANNEL_NUMBER(setup);
-	const uint8_t entity_id = CONTROL_ENTITY_ID(setup);
-	int ret;
+    const struct device *dev = usbd_class_get_private(c_data);
+    struct uac2_ctx *ctx = dev->data;
+    const uint8_t cs = CONTROL_SELECTOR(setup);
+    const uint8_t cn = CONTROL_CHANNEL_NUMBER(setup);
+    const uint8_t entity_id = CONTROL_ENTITY_ID(setup);
+    int ret;
 
-	if (setup->bRequest == CUR) {
-		uint32_t current_value = 0;
+    if (setup->bRequest == CUR) {
+        uint32_t current_value = 0;
 
-		if (!ctx->ops->feature_unit_ops || !ctx->ops->feature_unit_ops->get_cur_cb) {
-			errno = -ENOTSUP;
-			return 0;
-		}
+        if (!ctx->ops->feature_unit_ops || !ctx->ops->feature_unit_ops->get_cur_cb) {
+            errno = -ENOTSUP;
+            return 0;
+        }
 
-		ret = ctx->ops->feature_unit_ops->get_cur_cb(dev, entity_id, cs, cn,
-					      &current_value, ctx->user_data);
-		if (ret != 0) {
-			errno = ret;
-			return 0;
-		}
+        ret = ctx->ops->feature_unit_ops->get_cur_cb(dev, entity_id, cs, cn,
+                          &current_value, ctx->user_data);
+        if (ret != 0) {
+            errno = ret;
+            return 0;
+        }
 
-		/* Driver formats the response based on control type */
-		switch (cs) {
-		case USB_AUDIO_FU_MUTE_CONTROL:
-			net_buf_add_u8(buf, (uint8_t)current_value);
-			break;
-		case USB_AUDIO_FU_VOLUME_CONTROL:
-			net_buf_add_le16(buf, (uint16_t)current_value);
-			break;
-		case USB_AUDIO_FU_BASS_CONTROL:
-		case USB_AUDIO_FU_MID_CONTROL:
-		case USB_AUDIO_FU_TREBLE_CONTROL:
-			net_buf_add_u8(buf, (uint8_t)current_value);
-			break;
-		case USB_AUDIO_FU_AUTOMATIC_GAIN_CONTROL:
-		case USB_AUDIO_FU_DELAY_CONTROL:
-		case USB_AUDIO_FU_BASS_BOOST_CONTROL:
-		case USB_AUDIO_FU_LOUDNESS_CONTROL:
-		case USB_AUDIO_FU_INPUT_GAIN_CONTROL:
-		case USB_AUDIO_FU_INPUT_GAIN_PAD_CONTROL:
-		case USB_AUDIO_FU_PHASE_INVERTER_CONTROL:
-			net_buf_add_u8(buf, (uint8_t)current_value);
-			break;
-		case USB_AUDIO_FU_UNDERFLOW_CONTROL:
-		case USB_AUDIO_FU_OVERFLOW_CONTROL:
-			/* These are 1-byte boolean read-only controls */
-			net_buf_add_u8(buf, (uint8_t)current_value);
-			break;
-		case USB_AUDIO_FU_LATENCY_CONTROL:
-			/* This is a 4-byte read-only control */
-			net_buf_add_le32(buf, current_value);
-			break;
-		default:
-			errno = -ENOTSUP;
-			return 0;
-		}
-	} else if (setup->bRequest == RANGE) {
-		struct uac2_range range;
+        /* Driver formats the response based on control type */
+        switch (cs) {
+        case USB_AUDIO_FU_MUTE_CONTROL:
+        case USB_AUDIO_FU_AUTOMATIC_GAIN_CONTROL:
+        case USB_AUDIO_FU_BASS_BOOST_CONTROL:
+        case USB_AUDIO_FU_LOUDNESS_CONTROL:
+        case USB_AUDIO_FU_PHASE_INVERTER_CONTROL:
+        case USB_AUDIO_FU_UNDERFLOW_CONTROL:
+        case USB_AUDIO_FU_OVERFLOW_CONTROL:
+            net_buf_add_u8(buf, (uint8_t)current_value);
+            break;
+        case USB_AUDIO_FU_VOLUME_CONTROL:
+        case USB_AUDIO_FU_INPUT_GAIN_CONTROL:
+        case USB_AUDIO_FU_INPUT_GAIN_PAD_CONTROL:
+            net_buf_add_le16(buf, (uint16_t)current_value);
+            break;
+        case USB_AUDIO_FU_BASS_CONTROL:
+        case USB_AUDIO_FU_MID_CONTROL:
+        case USB_AUDIO_FU_TREBLE_CONTROL:
+            net_buf_add_u8(buf, (uint8_t)current_value);
+            break;
+        case USB_AUDIO_FU_GRAPHIC_EQUALIZER_CONTROL:
+        {
+            struct uac2_graphic_equalizer_state geq_state;
 
-		if (!ctx->ops->feature_unit_ops || !ctx->ops->feature_unit_ops->get_range_cb) {
-			errno = -ENOTSUP;
-			return 0;
-		}
+            if (!ctx->ops->feature_unit_ops ||
+                !ctx->ops->feature_unit_ops->get_graphic_equalizer_cb) {
+                errno = -ENOTSUP;
+                return 0;
+            }
+            ret = ctx->ops->feature_unit_ops->get_graphic_equalizer_cb(
+                dev, entity_id, cn, &geq_state, ctx->user_data);
+            if (ret != 0) {
+                errno = ret;
+                return 0;
+            }
+            /* Per spec Table 5-12, return bands present bitmap and current values */
+            net_buf_add_le32(buf, geq_state.bands_present);
+            for (int i = 0; i < 30; i++) {
+                if (geq_state.bands_present & BIT(i)) {
+                    net_buf_add_u8(buf, geq_state.cur_val[i]);
+                }
+            }
+            break;
+        }
+        case USB_AUDIO_FU_DELAY_CONTROL:
+        case USB_AUDIO_FU_LATENCY_CONTROL:
+            net_buf_add_le32(buf, current_value);
+            break;
+        default:
+            errno = -ENOTSUP;
+            return 0;
+        }
+    } else if (setup->bRequest == RANGE) {
+        struct uac2_range range;
 
-		memset(&range, 0, sizeof(range));
-		ret = ctx->ops->feature_unit_ops->get_range_cb(dev, entity_id, cs, cn,
-						&range, ctx->user_data);
-		if (ret != 0) {
-			errno = ret;
-			return 0;
-		}
+        if (!ctx->ops->feature_unit_ops || !ctx->ops->feature_unit_ops->get_range_cb) {
+            errno = -ENOTSUP;
+            return 0;
+        }
 
-		/* Driver formats the response */
-		net_buf_add_le16(buf, range.num_subranges);
+        memset(&range, 0, sizeof(range));
+        ret = ctx->ops->feature_unit_ops->get_range_cb(dev, entity_id, cs, cn,
+                        &range, ctx->user_data);
+        if (ret != 0) {
+            errno = ret;
+            return 0;
+        }
 
-		for (int i = 0; i < range.num_subranges; i++) {
-			switch (cs) {
-			case USB_AUDIO_FU_VOLUME_CONTROL: /* Layout 2 Parameter Block */
-			case USB_AUDIO_FU_BASS_CONTROL:
-			case USB_AUDIO_FU_MID_CONTROL:
-			case USB_AUDIO_FU_TREBLE_CONTROL:
-				net_buf_add_le16(buf, range.ranges[i].min);
-				net_buf_add_le16(buf, range.ranges[i].max);
-				net_buf_add_le16(buf, range.ranges[i].res);
-				break;
-			default:
-				errno = -ENOTSUP;
-				return 0;
-			}
-		}
-	} else {
-		errno = -ENOTSUP;
-		return 0;
-	}
+        /* Driver formats the response */
+        net_buf_add_le16(buf, range.num_subranges);
 
-	return 0;
+        for (int i = 0; i < range.num_subranges; i++) {
+            switch (cs) {
+            case USB_AUDIO_FU_VOLUME_CONTROL:
+            case USB_AUDIO_FU_INPUT_GAIN_CONTROL:
+            case USB_AUDIO_FU_INPUT_GAIN_PAD_CONTROL:
+                net_buf_add_le16(buf, range.ranges[i].min);
+                net_buf_add_le16(buf, range.ranges[i].max);
+                net_buf_add_le16(buf, range.ranges[i].res);
+                break;
+            case USB_AUDIO_FU_BASS_CONTROL:
+            case USB_AUDIO_FU_MID_CONTROL:
+            case USB_AUDIO_FU_TREBLE_CONTROL:
+            case USB_AUDIO_FU_GRAPHIC_EQUALIZER_CONTROL:
+                net_buf_add_u8(buf, range.ranges[i].min);
+                net_buf_add_u8(buf, range.ranges[i].max);
+                net_buf_add_u8(buf, range.ranges[i].res);
+                break;
+            case USB_AUDIO_FU_DELAY_CONTROL:
+                net_buf_add_le32(buf, range.ranges[i].min);
+                net_buf_add_le32(buf, range.ranges[i].max);
+                net_buf_add_le32(buf, range.ranges[i].res);
+                break;
+            default:
+                errno = -ENOTSUP;
+                return 0;
+            }
+        }
+    } else {
+        errno = -ENOTSUP;
+        return 0;
+    }
+
+    return 0;
 }
 
 static int uac2_control_to_dev(struct usbd_class_data *const c_data,
