@@ -801,6 +801,15 @@ static int get_feature_unit_request(struct usbd_class_data *const c_data,
 		case USB_AUDIO_FU_PHASE_INVERTER_CONTROL:
 			net_buf_add_u8(buf, (uint8_t)current_value);
 			break;
+		case USB_AUDIO_FU_UNDERFLOW_CONTROL:
+		case USB_AUDIO_FU_OVERFLOW_CONTROL:
+			/* These are 1-byte boolean read-only controls */
+			net_buf_add_u8(buf, (uint8_t)current_value);
+			break;
+		case USB_AUDIO_FU_LATENCY_CONTROL:
+			/* This is a 4-byte read-only control */
+			net_buf_add_le32(buf, current_value);
+			break;
 		default:
 			errno = -ENOTSUP;
 			return 0;
