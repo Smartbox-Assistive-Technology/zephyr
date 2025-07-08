@@ -781,22 +781,22 @@ static int get_feature_unit_request(struct usbd_class_data *const c_data,
 
 		/* Driver formats the response based on control type */
 		switch (cs) {
-		case FU_MUTE_CONTROL:
+		case USB_AUDIO_FU_MUTE_CONTROL:
 			net_buf_add_u8(buf, (uint8_t)current_value);
 			break;
-		case FU_VOLUME_CONTROL:
-		case FU_BASS_CONTROL:
-		case FU_MID_CONTROL:
-		case FU_TREBLE_CONTROL:
+		case USB_AUDIO_FU_VOLUME_CONTROL:
+		case USB_AUDIO_FU_BASS_CONTROL:
+		case USB_AUDIO_FU_MID_CONTROL:
+		case USB_AUDIO_FU_TREBLE_CONTROL:
 			net_buf_add_le16(buf, (uint16_t)current_value);
 			break;
-		case FU_AUTOMATIC_GAIN_CONTROL:
-		case FU_DELAY_CONTROL:
-		case FU_BASS_BOOST_CONTROL:
-		case FU_LOUDNESS_CONTROL:
-		case FU_INPUT_GAIN_CONTROL:
-		case FU_INPUT_GAIN_PAD_CONTROL:
-		case FU_PHASE_INVERTER_CONTROL:
+		case USB_AUDIO_FU_AUTOMATIC_GAIN_CONTROL:
+		case USB_AUDIO_FU_DELAY_CONTROL:
+		case USB_AUDIO_FU_BASS_BOOST_CONTROL:
+		case USB_AUDIO_FU_LOUDNESS_CONTROL:
+		case USB_AUDIO_FU_INPUT_GAIN_CONTROL:
+		case USB_AUDIO_FU_INPUT_GAIN_PAD_CONTROL:
+		case USB_AUDIO_FU_PHASE_INVERTER_CONTROL:
 			net_buf_add_u8(buf, (uint8_t)current_value);
 			break;
 		default:
@@ -824,10 +824,10 @@ static int get_feature_unit_request(struct usbd_class_data *const c_data,
 
 		for (int i = 0; i < range.num_subranges; i++) {
 			switch (cs) {
-			case FU_VOLUME_CONTROL: /* Layout 2 Parameter Block */
-			case FU_BASS_CONTROL:
-			case FU_MID_CONTROL:
-			case FU_TREBLE_CONTROL:
+			case USB_AUDIO_FU_VOLUME_CONTROL: /* Layout 2 Parameter Block */
+			case USB_AUDIO_FU_BASS_CONTROL:
+			case USB_AUDIO_FU_MID_CONTROL:
+			case USB_AUDIO_FU_TREBLE_CONTROL:
 				net_buf_add_le16(buf, range.ranges[i].min);
 				net_buf_add_le16(buf, range.ranges[i].max);
 				net_buf_add_le16(buf, range.ranges[i].res);

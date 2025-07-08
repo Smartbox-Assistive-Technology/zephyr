@@ -19,6 +19,31 @@
 
 #include <zephyr/device.h>
 
+/** Feature Unit Control Selectors
+ * Refer Table A-23 from UAC2 specification
+ */
+enum usb_audio_fucs {
+	/* UAC1 and UAC2 controls */
+	USB_AUDIO_FU_CONTROL_UNDEFINED			= 0x00,
+	USB_AUDIO_FU_MUTE_CONTROL				= 0x01,
+	USB_AUDIO_FU_VOLUME_CONTROL				= 0x02,
+	USB_AUDIO_FU_BASS_CONTROL				= 0x03,
+	USB_AUDIO_FU_MID_CONTROL				= 0x04,
+	USB_AUDIO_FU_TREBLE_CONTROL				= 0x05,
+	USB_AUDIO_FU_GRAPHIC_EQUALIZER_CONTROL	= 0x06,
+	USB_AUDIO_FU_AUTOMATIC_GAIN_CONTROL		= 0x07,
+	USB_AUDIO_FU_DELAY_CONTROL				= 0x08,
+	USB_AUDIO_FU_BASS_BOOST_CONTROL			= 0x09,
+	USB_AUDIO_FU_LOUDNESS_CONTROL			= 0x0A,
+	/* UAC2-only controls */
+	USB_AUDIO_FU_INPUT_GAIN_CONTROL			= 0x0B,
+	USB_AUDIO_FU_INPUT_GAIN_PAD_CONTROL		= 0x0C,
+	USB_AUDIO_FU_PHASE_INVERTER_CONTROL		= 0x0D,
+	USB_AUDIO_FU_UNDERFLOW_CONTROL			= 0x0E,
+	USB_AUDIO_FU_OVERFLOW_CONTROL			= 0x0F,
+	USB_AUDIO_FU_LATENCY_CONTROL			= 0x10
+};
+
 /**
  * @brief USB Audio Class 2 device API
  * @defgroup uac2_device USB Audio Class 2 device API
@@ -73,7 +98,7 @@ struct uac2_feature_unit_ops {
 	 * @return 0 on success, negative value on error
 	 */
 	int (*set_cur_cb)(const struct device *dev, uint8_t entity_id,
-		      uint8_t control_selector, uint8_t channel_num,
+		      enum usb_audio_fucs control_selector, uint8_t channel_num,
 		      const struct net_buf *buf, void *user_data);
 
 	/**
@@ -87,7 +112,7 @@ struct uac2_feature_unit_ops {
 	 * @return 0 on success, negative value on error
 	 */
 	int (*get_cur_cb)(const struct device *dev, uint8_t entity_id,
-		      uint8_t control_selector, uint8_t channel_num,
+		      enum usb_audio_fucs control_selector, uint8_t channel_num,
 		      uint32_t *value, void *user_data);
 
 	/**
@@ -101,7 +126,7 @@ struct uac2_feature_unit_ops {
 	 * @return 0 on success, negative value on error
 	 */
 	int (*get_range_cb)(const struct device *dev, uint8_t entity_id,
-		        uint8_t control_selector, uint8_t channel_num,
+		        enum usb_audio_fucs control_selector, uint8_t channel_num,
 		        struct uac2_range *range, void *user_data);
 };
 
