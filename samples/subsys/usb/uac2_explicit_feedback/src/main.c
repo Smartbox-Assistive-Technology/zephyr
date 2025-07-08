@@ -20,6 +20,18 @@ LOG_MODULE_REGISTER(uac2_sample, LOG_LEVEL_INF);
 
 #define HEADPHONES_OUT_TERMINAL_ID UAC2_ENTITY_ID(DT_NODELABEL(out_terminal))
 
+/* Feature Unit definitions */
+#define HEADPHONES_FEATURE_UNIT_ID UAC2_ENTITY_ID(DT_NODELABEL(out_feature_unit))
+
+/* Volume characteristics in 1/256 dB steps */
+#define VOLUME_MAX_DB   (0)          /* 0 dB */
+#define VOLUME_MIN_DB   (-40 * 256)  /* -40 dB */
+#define VOLUME_RES_DB   (256)        /* 1 dB steps */
+
+/* Feature Unit state variables */
+static bool g_is_muted = false;
+static int16_t g_current_volume = 0; /* 0 dB by default */
+
 #define SAMPLE_FREQUENCY    (SAMPLES_PER_SOF * 1000)
 #define SAMPLE_BIT_WIDTH    16
 #define NUMBER_OF_CHANNELS  2
@@ -48,6 +60,94 @@ struct usb_i2s_ctx {
 	 */
 	uint8_t i2s_blocks_written;
 	struct feedback_ctx *fb;
+};
+
+
+/* Feature Unit callback implementations
+ * 
+ * These callbacks handle USB Audio Class 2 Feature Unit controls for:
+ * - Volume control: 16-bit signed value in 1/256 dB steps
+ * - Mute control: Boolean on/off state
+ * 
+ * The Feature Unit provides standard audio controls that USB hosts can use
+ * to adjust audio properties. This implementation supports:
+ * - SET_CUR: Host sets current value (volume level or mute state)
+ * - GET_CUR: Host queries current value 
+ * - GET_RANGE: Host queries supported volume range and resolution
+ */
+
+/* Feature Unit callback for SET requests from the host */
+static int app_set_feature_unit_cb(const struct device *dev, uint8_t entity_id,
+				   enum usb_audio_fucs cs, uint8_t cn,
+				   const struct net_buf *buf, void *user_data)
+{
+	switch (cs) {
+	case USB_AUDIO_FU_MUTE_CONTROL:
+		g_is_muted = buf->data[0];
+		LOG_INF("Mute for entity %d channel %d set to %s", 
+			entity_id, cn, g_is_muted ? "ON" : "OFF");
+		break;
+	case USB_AUDIO_FU_VOLUME_CONTROL:
+		g_current_volume = sys_get_le16(buf->data);
+		LOG_INF("Volume for entity %d channel %d set to %d (1/256 dB)", 
+			entity_id, cn, g_current_volume);
+		break;
+	default:
+		LOG_WRN("Unsupported control selector 0x%02x", cs);
+		return -ENOTSUP;
+	}
+	return 0;
+}
+
+/* Feature Unit callback for GET CUR requests from the host */
+static int app_get_fu_cur_cb(const struct device *dev, uint8_t entity_id,
+			     enum usb_audio_fucs cs, uint8_t cn,
+			     uint32_t *value, void *user_data)
+{
+	switch (cs) {
+	case USB_AUDIO_FU_MUTE_CONTROL:
+		*value = g_is_muted;
+		LOG_DBG("Get mute for entity %d channel %d: %s", 
+			entity_id, cn, g_is_muted ? "ON" : "OFF");
+		break;
+	case USB_AUDIO_FU_VOLUME_CONTROL:
+		*value = g_current_volume;
+		LOG_DBG("Get volume for entity %d channel %d: %d (1/256 dB)", 
+			entity_id, cn, g_current_volume);
+		break;
+	default:
+		LOG_WRN("Unsupported control selector 0x%02x", cs);
+		return -ENOTSUP;
+	}
+	return 0;
+}
+
+/* Feature Unit callback for GET RANGE requests from the host */
+static int app_get_fu_range_cb(const struct device *dev, uint8_t entity_id,
+			       enum usb_audio_fucs cs, uint8_t cn,
+			       struct uac2_range *range, void *user_data)
+{
+	switch (cs) {
+	case USB_AUDIO_FU_VOLUME_CONTROL:
+		range->num_subranges = 1;
+		range->ranges[0].min = VOLUME_MIN_DB;
+		range->ranges[0].max = VOLUME_MAX_DB;
+		range->ranges[0].res = VOLUME_RES_DB;
+		LOG_DBG("Get volume range for entity %d channel %d: %d to %d dB", 
+			entity_id, cn, VOLUME_MIN_DB/256, VOLUME_MAX_DB/256);
+		break;
+	default:
+		LOG_WRN("Unsupported control selector 0x%02x", cs);
+		return -ENOTSUP;
+	}
+	return 0;
+}
+
+/* USB Audio operations structure with nested feature unit operations */
+static const struct uac2_feature_unit_ops usb_audio_fu_ops = {
+	.set_cur_cb = app_set_feature_unit_cb,
+	.get_cur_cb = app_get_fu_cur_cb,
+	.get_range_cb = app_get_fu_range_cb,
 };
 
 static void uac2_terminal_update_cb(const struct device *dev, uint8_t terminal,
@@ -247,6 +347,7 @@ static struct uac2_ops usb_audio_ops = {
 	.data_recv_cb = uac2_data_recv_cb,
 	.buf_release_cb = uac2_buf_release_cb,
 	.feedback_cb = uac2_feedback_cb,
+	.feature_unit_ops = &usb_audio_fu_ops,
 };
 
 static struct usb_i2s_ctx main_ctx;
