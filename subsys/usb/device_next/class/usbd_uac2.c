@@ -801,29 +801,9 @@ static int get_feature_unit_request(struct usbd_class_data *const c_data,
             net_buf_add_u8(buf, (uint8_t)current_value);
             break;
         case USB_AUDIO_FU_GRAPHIC_EQUALIZER_CONTROL:
-        {
-            struct uac2_graphic_equalizer_state geq_state;
-
-            if (!ctx->ops->feature_unit_ops ||
-                !ctx->ops->feature_unit_ops->get_graphic_equalizer_cb) {
-                errno = -ENOTSUP;
-                return 0;
-            }
-            ret = ctx->ops->feature_unit_ops->get_graphic_equalizer_cb(
-                dev, entity_id, cn, &geq_state, ctx->user_data);
-            if (ret != 0) {
-                errno = ret;
-                return 0;
-            }
-            /* Per spec Table 5-12, return bands present bitmap and current values */
-            net_buf_add_le32(buf, geq_state.bands_present);
-            for (int i = 0; i < 30; i++) {
-                if (geq_state.bands_present & BIT(i)) {
-                    net_buf_add_u8(buf, geq_state.cur_val[i]);
-                }
-            }
-            break;
-        }
+            /* Graphic equalizer not currently supported */
+            errno = -ENOTSUP;
+            return 0;
         case USB_AUDIO_FU_DELAY_CONTROL:
         case USB_AUDIO_FU_LATENCY_CONTROL:
             net_buf_add_le32(buf, current_value);
