@@ -785,10 +785,12 @@ static int get_feature_unit_request(struct usbd_class_data *const c_data,
 			net_buf_add_u8(buf, (uint8_t)current_value);
 			break;
 		case USB_AUDIO_FU_VOLUME_CONTROL:
+			net_buf_add_le16(buf, (uint16_t)current_value);
+			break;
 		case USB_AUDIO_FU_BASS_CONTROL:
 		case USB_AUDIO_FU_MID_CONTROL:
 		case USB_AUDIO_FU_TREBLE_CONTROL:
-			net_buf_add_le16(buf, (uint16_t)current_value);
+			net_buf_add_u8(buf, (uint8_t)current_value);
 			break;
 		case USB_AUDIO_FU_AUTOMATIC_GAIN_CONTROL:
 		case USB_AUDIO_FU_DELAY_CONTROL:
