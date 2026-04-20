@@ -1,0 +1,39 @@
+# Copyright (c) 2025 Smartbox Assistive Technology Ltd
+# SPDX-License-Identifier: Apache-2.0
+
+description: USB Audio Class 1 Audio Streaming interface
+
+compatible: "zephyr,uac1-audio-streaming"
+
+properties:
+  linked-terminal:
+    type: phandle
+    required: true
+    description: |
+      Input or Output Terminal to which this interface is connected.
+
+  implicit-feedback:
+    type: boolean
+    description: |
+      Enable implicit feedback on asynchronous endpoint. For OUT endpoints
+      setting this property removes explicit feedback endpoint.
+
+  subframe-size:
+    type: int
+    required: true
+    description: |
+      Number of bytes occupied by one audio subframe (per channel).
+      Can be 1, 2, 3 or 4.
+
+  bit-resolution:
+    type: int
+    required: true
+    description: |
+      Number of effectively used bits in audio subframe.
+
+  sampling-frequencies:
+    type: array
+    required: true
+    description: |
+      List of supported sampling frequencies in Hz. Values must be sorted
+      in ascending order. Each value is encoded as 3 bytes in the descriptor.

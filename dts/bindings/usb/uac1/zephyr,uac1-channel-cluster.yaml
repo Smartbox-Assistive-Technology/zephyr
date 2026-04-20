@@ -1,0 +1,49 @@
+# Copyright (c) 2025 Smartbox Assistive Technology Ltd
+# SPDX-License-Identifier: Apache-2.0
+
+description: USB Audio Class 1 Audio Channel Cluster
+
+properties:
+  front-left:
+    type: boolean
+    description: Front Left channel present in the cluster
+
+  front-right:
+    type: boolean
+    description: Front Right channel present in the cluster
+
+  front-center:
+    type: boolean
+    description: Front Center channel present in the cluster
+
+  low-frequency-effects:
+    type: boolean
+    description: Low Frequency Effects channel present in the cluster
+
+  back-left:
+    type: boolean
+    description: Back Left channel present in the cluster
+
+  back-right:
+    type: boolean
+    description: Back Right channel present in the cluster
+
+  front-left-of-center:
+    type: boolean
+    description: Front Left of Center channel present in the cluster
+
+  front-right-of-center:
+    type: boolean
+    description: Front Right of Center channel present in the cluster
+
+  back-center:
+    type: boolean
+    description: Back Center channel present in the cluster
+
+  side-left:
+    type: boolean
+    description: Side Left channel present in the cluster
+
+  side-right:
+    type: boolean
+    description: Side Right channel present in the cluster

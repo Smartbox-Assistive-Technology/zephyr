@@ -1,0 +1,12 @@
+# Copyright (c) 2025 Smartbox Assistive Technology Ltd
+# SPDX-License-Identifier: Apache-2.0
+
+description: USB Audio Class 1 instance
+
+compatible: "zephyr,uac1"
+
+properties:
+  full-speed:
+    type: boolean
+    description: |
+      True if this instance is allowed to operate at Full-Speed.
